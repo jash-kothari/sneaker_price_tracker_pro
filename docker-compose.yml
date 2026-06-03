@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # Database
+  db:
+    image: postgres:16-alpine
+    container_name: solesentry_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: solesentry
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Redis Message Broker
+  redis:
+    image: redis:7-alpine
+    container_name: solesentry_redis
+    restart: always
+    ports:
+      - "6380:6379"
+
+  # FastAPI Web Server
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: solesentry_backend
+    restart: always
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/solesentry
+      - SYNC_DATABASE_URL=postgresql://postgres:postgres@db:5432/solesentry
+      - REDIS_URL=redis://redis:6379/0
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-TELEGRAM_BOT_TOKEN_PLACEHOLDER}
+      - PRICE_CHECK_INTERVAL_SECONDS=90
+    depends_on:
+      - db
+      - redis
+
+  # Celery Background Scraping Worker
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: solesentry_celery_worker
+    restart: always
+    command: celery -A app.worker.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/solesentry
+      - SYNC_DATABASE_URL=postgresql://postgres:postgres@db:5432/solesentry
+      - REDIS_URL=redis://redis:6379/0
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-TELEGRAM_BOT_TOKEN_PLACEHOLDER}
+    depends_on:
+      - db
+      - redis
+
+  # Celery Beat Periodic Scheduler
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: solesentry_celery_beat
+    restart: always
+    command: celery -A app.worker.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/solesentry
+      - SYNC_DATABASE_URL=postgresql://postgres:postgres@db:5432/solesentry
+      - REDIS_URL=redis://redis:6379/0
+      - PRICE_CHECK_INTERVAL_SECONDS=90
+    depends_on:
+      - db
+      - redis
+
+  # Telegram Bot Client
+  telegram_bot:
+    build:
+      context: ./telegram_bot
+      dockerfile: Dockerfile
+    container_name: solesentry_telegram_bot
+    restart: always
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-TELEGRAM_BOT_TOKEN_PLACEHOLDER}
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+
+  # React Frontend Dashboard Served via Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: solesentry_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
