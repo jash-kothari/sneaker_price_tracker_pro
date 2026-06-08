@@ -91,6 +91,7 @@ async def check_sneaker_price_async(sneaker_id: int):
         status = "Stable"
         updates_type = sneaker.updates_type
         image = sneaker.image
+        name = sneaker.name
         
         if updates_type == "Simulated Crawler":
             new_price, status = simulate_price_update(sneaker.original_price, old_price)
@@ -100,6 +101,7 @@ async def check_sneaker_price_async(sneaker_id: int):
                 scraped = await run_scraper(sneaker.url, sneaker.size)
                 new_price = scraped["current_price"]
                 image = scraped["image"]
+                name = scraped["name"]
                 
                 if new_price < old_price: status = "Dropped"
                 elif new_price > old_price: status = "Increased"
@@ -116,6 +118,7 @@ async def check_sneaker_price_async(sneaker_id: int):
             "status": status,
             "updates_type": updates_type,
             "image": image,
+            "name": name,
             "last_checked": datetime.datetime.utcnow()
         }
         
@@ -177,6 +180,7 @@ async def check_sneaker_price_async(sneaker_id: int):
             "is_active": updated_sneaker.is_active,
             "updates_type": updated_sneaker.updates_type,
             "status": updated_sneaker.status,
+            "image": updated_sneaker.image,
             "last_checked": updated_sneaker.last_checked.isoformat(),
             "created_at": updated_sneaker.created_at.isoformat(),
             "history": history_list

@@ -8,7 +8,9 @@ from app.scrapers.stores import (
     GoatScraper,
     FootLockerScraper,
     VegNonVegScraper,
-    SuperkicksScraper
+    SuperkicksScraper,
+    AsicsScraper,
+    OnitsukaTigerScraper
 )
 
 def get_scraper(url: str, size: str = "9.5") -> BaseScraper:
@@ -22,6 +24,10 @@ def get_scraper(url: str, size: str = "9.5") -> BaseScraper:
         return NikeScraper(url, size)
     elif "adidas.co.in" in host or "adidas.in" in host or "adidas.com" in host:
         return AdidasScraper(url, size)
+    elif "asics.co.in" in host or "asics.com" in host:
+        return AsicsScraper(url, size)
+    elif "onitsukatiger.com" in host:
+        return OnitsukaTigerScraper(url, size)
     elif "vegnonveg.com" in host:
         return VegNonVegScraper(url, size)
     elif "superkicks.in" in host:
@@ -37,4 +43,7 @@ def get_scraper(url: str, size: str = "9.5") -> BaseScraper:
 
 async def run_scraper(url: str, size: str = "9.5") -> dict:
     scraper = get_scraper(url, size)
-    return await scraper.scrape()
+    data = await scraper.scrape()
+    if "image" in data and data["image"]:
+        data["image"] = scraper.make_absolute_url(data["image"])
+    return data

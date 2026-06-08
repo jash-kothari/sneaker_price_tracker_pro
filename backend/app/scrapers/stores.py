@@ -1,4 +1,5 @@
 import asyncio
+import re
 import traceback
 from playwright.async_api import async_playwright
 from app.scrapers.base import BaseScraper
@@ -396,6 +397,118 @@ class SuperkicksScraper(BaseScraper):
             "name": self.name,
             "brand": self.brand,
             "store": "Superkicks",
+            "url": self.url,
+            "image": self.image,
+            "size": self.size,
+            "original_price": mock_price,
+            "current_price": mock_price,
+            "updates_type": "Simulated Crawler",
+            "status": "Stable"
+        }
+
+class AsicsScraper(BaseScraper):
+    async def scrape(self) -> dict:
+        try:
+            async with async_playwright() as p:
+                browser, context = await self.get_browser_context(p)
+                page = await context.new_page()
+                await page.goto(self.url, wait_until="domcontentloaded", timeout=12000)
+                
+                scraped_title = await page.get_attribute("meta[property='og:title']", "content")
+                scraped_image = await page.get_attribute("meta[property='og:image']", "content")
+                
+                meta_price = await page.get_attribute("meta[property='product:price:amount']", "content")
+                if not meta_price:
+                    meta_price = await page.get_attribute("meta[property='og:price:amount']", "content")
+                
+                price = None
+                if meta_price:
+                    price = float(meta_price.replace(",", "").strip())
+                else:
+                    price_el = page.locator(".price, [itemprop='price']").first
+                    if await price_el.is_visible():
+                        price_str = await price_el.text_content()
+                        cleaned = re.sub(r'[^\d.]', '', price_str)
+                        price = float(cleaned)
+                        
+                await browser.close()
+                if price:
+                    return {
+                        "name": scraped_title.split("|")[0].strip() if scraped_title else self.name,
+                        "brand": "ASICS",
+                        "store": "Asics India" if "asics.co.in" in self.url else "Asics",
+                        "url": self.url,
+                        "image": scraped_image or self.image,
+                        "size": self.size,
+                        "original_price": price,
+                        "current_price": price,
+                        "updates_type": "Live Scraper",
+                        "status": "Stable"
+                    }
+        except Exception as e:
+            print(f"[AsicsScraper] Live scrape failed: {str(e)}. Falling back to simulation.")
+            
+        mock_price = self.generate_mock_price()
+        return {
+            "name": self.name,
+            "brand": "ASICS",
+            "store": "Asics India" if "asics.co.in" in self.url else "Asics",
+            "url": self.url,
+            "image": self.image,
+            "size": self.size,
+            "original_price": mock_price,
+            "current_price": mock_price,
+            "updates_type": "Simulated Crawler",
+            "status": "Stable"
+        }
+
+class OnitsukaTigerScraper(BaseScraper):
+    async def scrape(self) -> dict:
+        try:
+            async with async_playwright() as p:
+                browser, context = await self.get_browser_context(p)
+                page = await context.new_page()
+                await page.goto(self.url, wait_until="domcontentloaded", timeout=12000)
+                
+                scraped_title = await page.get_attribute("meta[property='og:title']", "content")
+                scraped_image = await page.get_attribute("meta[property='og:image']", "content")
+                
+                meta_price = await page.get_attribute("meta[property='product:price:amount']", "content")
+                if not meta_price:
+                    meta_price = await page.get_attribute("meta[property='og:price:amount']", "content")
+                
+                price = None
+                if meta_price:
+                    price = float(meta_price.replace(",", "").strip())
+                else:
+                    price_el = page.locator(".price, [itemprop='price']").first
+                    if await price_el.is_visible():
+                        price_str = await price_el.text_content()
+                        cleaned = re.sub(r'[^\d.]', '', price_str)
+                        price = float(cleaned)
+                        
+                await browser.close()
+                if price:
+                    return {
+                        "name": scraped_title.split("|")[0].strip() if scraped_title else self.name,
+                        "brand": "Onitsuka Tiger",
+                        "store": "Onitsuka Tiger India" if "/in" in self.url else "Onitsuka Tiger",
+                        "url": self.url,
+                        "image": scraped_image or self.image,
+                        "size": self.size,
+                        "original_price": price,
+                        "current_price": price,
+                        "updates_type": "Live Scraper",
+                        "status": "Stable"
+                    }
+        except Exception as e:
+            print(f"[OnitsukaTigerScraper] Live scrape failed: {str(e)}. Falling back to simulation.")
+            
+        mock_price = self.generate_mock_price()
+        return {
+            "name": self.name,
+            "brand": "Onitsuka Tiger",
+            "store": "Onitsuka Tiger India" if "/in" in self.url else "Onitsuka Tiger",
             "url": self.url,
             "image": self.image,
             "size": self.size,

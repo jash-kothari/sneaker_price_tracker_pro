@@ -129,6 +129,7 @@ async def seed_demo_data(db: AsyncSession):
             "current_price": curr_p,
             "updates_type": "Simulated Crawler",
             "status": status,
+            "image": scraper.image,
             "is_active": True,
             "last_checked": datetime.datetime.utcnow(),
             "created_at": datetime.datetime.utcnow() - datetime.timedelta(days=10)
@@ -179,6 +180,7 @@ def make_sneaker_response(s, history_list) -> schemas.SneakerResponse:
         is_active=s.is_active,
         updates_type=s.updates_type,
         status=s.status,
+        image=s.image,
         last_checked=s.last_checked,
         created_at=s.created_at,
         history=history_list
@@ -226,8 +228,9 @@ async def track_sneaker(payload: schemas.SneakerCreate, background_tasks: Backgr
             "target_price": target,
             "original_price": orig_price,
             "current_price": orig_price,
-            "updates_type": "Simulated Crawler", # Initial state
+            "updates_type": "Live Scraper", # Initial state
             "status": "Stable",
+            "image": scraper.image,
             "is_active": True,
             "last_checked": datetime.datetime.utcnow(),
             "created_at": datetime.datetime.utcnow()
@@ -287,6 +290,9 @@ async def force_price_check(sneaker_id: int, db: AsyncSession = Depends(get_db))
     if not db_sneaker:
         raise HTTPException(status_code=404, detail="Sneaker not found")
         
+    # Force reset updates_type to Live Scraper for immediate check
+    await crud.update_sneaker_fields(db, sneaker_id, {"updates_type": "Live Scraper"})
+    
     # Queue immediate check in Celery
     check_sneaker_price_task.delay(sneaker_id)
     return {"message": "Scrape task dispatched successfully"}

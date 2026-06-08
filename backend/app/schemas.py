@@ -61,6 +61,7 @@ class SneakerResponse(BaseModel):
     is_active: bool
     updates_type: str
     status: str
+    image: Optional[str] = None
     last_checked: datetime.datetime
     created_at: datetime.datetime
     history: List[PriceHistoryBase] = []

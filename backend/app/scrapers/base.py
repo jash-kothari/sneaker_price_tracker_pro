@@ -10,6 +10,8 @@ SNEAKER_IMAGES = {
     "run": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80",
     "adidas": "https://images.unsplash.com/photo-1539185441755-769473a23570?w=600&auto=format&fit=crop&q=80",
     "casual": "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600&auto=format&fit=crop&q=80",
+    "asics": "https://images.unsplash.com/photo-1629130745850-159f5559c93e?w=600&auto=format&fit=crop&q=80",
+    "onitsuka": "https://images.unsplash.com/photo-1597045566677-8cf032ed6634?w=600&auto=format&fit=crop&q=80",
     "default": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80"
 }
 
@@ -44,6 +46,14 @@ class BaseScraper:
                 return "Crepdog Crew"
             if "in.puma.com" in host:
                 return "Puma India"
+            if "asics.co.in" in host or ("asics.com" in host and ("/in" in path or "/in/" in path)):
+                return "Asics India"
+            if "asics.com" in host:
+                return "Asics"
+            if "onitsukatiger.com" in host:
+                if "/in" in path or "/in/" in path:
+                    return "Onitsuka Tiger India"
+                return "Onitsuka Tiger"
             if "adidas.com" in host: return "Adidas"
             if "stockx.com" in host: return "StockX"
             if "goat.com" in host: return "GOAT"
@@ -60,9 +70,13 @@ class BaseScraper:
             if not parts:
                 return "custom-sneaker"
             
-            # Find the segment with hyphens indicating a slug
-            candidates = [p for p in parts if "-" in p and len(p) > 4]
-            slug = candidates[-1] if candidates else parts[-1]
+            # E-commerce pattern: /p/stylecode or /product/stylecode at the end
+            if len(parts) >= 3 and parts[-2] in ["p", "product", "products", "dp"]:
+                slug = parts[-3]
+            else:
+                # Find the segment with hyphens indicating a slug
+                candidates = [p for p in parts if "-" in p and len(p) > 4]
+                slug = candidates[-1] if candidates else parts[-1]
             
             # Clean suffix
             slug = re.sub(r'\.html$', '', slug, flags=re.IGNORECASE)
@@ -77,7 +91,7 @@ class BaseScraper:
         words = []
         for word in slug_clean.split():
             # Skip code identifiers (e.g. DZ5485)
-            if re.match(r'^[a-z0-9]{6,10}$', word, re.IGNORECASE):
+            if re.match(r'^[a-z0-9]{6,10}$', word, re.IGNORECASE) and any(c.isdigit() for c in word):
                 continue
             words.append(word.capitalize())
             
@@ -91,6 +105,8 @@ class BaseScraper:
         elif "nike" in name_lower or "dunk" in name_lower: brand = "Nike"
         elif "new balance" in name_lower: brand = "New Balance"
         elif "puma" in name_lower: brand = "Puma"
+        elif "asics" in name_lower or "asics" in self.store.lower(): brand = "ASICS"
+        elif "onitsuka" in name_lower or "tiger" in name_lower or "onitsuka" in self.store.lower(): brand = "Onitsuka Tiger"
         else: brand = self.store if self.store not in ["Custom Store", "Unknown Store"] else "Premium"
         
         return name, brand
@@ -103,6 +119,10 @@ class BaseScraper:
             return SNEAKER_IMAGES["dunk"]
         if any(k in slug_lower for k in ["yeezy", "ultraboost", "nmd"]):
             return SNEAKER_IMAGES["adidas"]
+        if any(k in slug_lower for k in ["asics", "gel-"]) or self.brand == "ASICS":
+            return SNEAKER_IMAGES["asics"]
+        if any(k in slug_lower for k in ["onitsuka", "tiger", "mexico"]) or self.brand == "Onitsuka Tiger":
+            return SNEAKER_IMAGES["onitsuka"]
         if any(k in slug_lower for k in ["max", "zoom", "run", "pegasus"]):
             return SNEAKER_IMAGES["run"]
         if any(k in slug_lower for k in ["casual", "blazer", "stan-smith"]):
@@ -118,7 +138,33 @@ class BaseScraper:
         elif self.brand == "Adidas": price = 10999.0
         elif self.brand == "Puma": price = 8999.0
         elif self.brand == "New Balance": price = 12999.0
+        elif self.brand == "ASICS": price = 9999.0
+        elif self.brand == "Onitsuka Tiger": price = 10999.0
         return price
+
+    def make_absolute_url(self, url: str) -> str:
+        if not url:
+            return ""
+        url = url.strip()
+        if url.startswith("http://") or url.startswith("https://"):
+            return url
+        if url.startswith("//"):
+            try:
+                parsed = urlparse(self.url)
+                scheme = parsed.scheme or "https"
+                return f"{scheme}:{url}"
+            except Exception:
+                return f"https:{url}"
+        try:
+            parsed = urlparse(self.url)
+            base = f"{parsed.scheme}://{parsed.netloc}"
+            if url.startswith("/"):
+                return f"{base}{url}"
+            else:
+                return f"{base}/{url}"
+        except Exception:
+            return url
+
 
     async def get_browser_context(self, playwright):
         # Setup modern stealth headers
