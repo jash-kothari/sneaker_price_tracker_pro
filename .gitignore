@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# Node / React Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.eslintcache
+.parcel-cache
+
+# Environment variables (Sensitive Data)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Databases / Data Volumes
+*.db
+*.sqlite
+*.sqlite3
+postgres_data/
+
+# IDEs & Text Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
